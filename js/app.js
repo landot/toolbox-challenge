@@ -1,153 +1,148 @@
-/**
- * Created by iguest on 12/2/14.
- */
-
+//app.js: our main javascript file for this app
+"use strict"
 var tileArray = [];
-var matchNumber = 0;
+var matchesNumber = 0;
 var remainingPairs = 8;
-var missed = 0;
-var tilesBeingUsed = [];
-var timeCount;
-var storedPicture;
-var canClick = true;
-var doneLoading;
+var missedNumber = 0;
+var storedPicture = null;
+var timeCount = null;
+var doneLoading = null;
 
-var i;
-for(i = 1; i <= 32; i++) {
+var idx;
+//creates an array list of all tiles(only 8 will be used in the end)
+for (idx = 1; idx <= 32; idx++) {
     tileArray.push({
-        idNumber: i,
-        imagesrc: 'img/tile' + i + '.jpg',
+        idNumber: idx,
+        imagesrc: 'img/tile' + idx + '.jpg',
         tileClicked: false,
-        tileMatched: false
+        tilematched: false
     });
 }
 
 $(document).ready(function() {
-    $('#begin').click(function() {
+    //begins the game for the player
+    $('#begin').click(function() {        
+        //win message
         $('#win').css('display', 'none');
-        tilesBeingUsed = [];
-        matchNumber = 0;
-        missed = 0;
+        clearInterval(timeCount); 
+        //makes vars have original values and updates time
+        matchesNumber = 0;
         remainingPairs = 8;
-        storedPicture = null;
-        console.log('game has started');
-        //randomly picks 8 of the 32 tiles
+        missedNumber = 0;
+        update();  
+
+        //picks 8 of the 32 tiles
         tileArray = _.sample(tileArray, 8);
-        //puts the chosen tiles along with a clone of each in a new array
-        _.forEach(tileArray, function(tile) {
+        var tilesBeingUsed = [];
+        _.forEach(tilesBeingUsed, function (tile) {
             tilesBeingUsed.push(tile);
-            tilesBeingUsed.push(_.clone(tile))
-        });
-        //shuffles the new tiles
+            tilesBeingUsed.push(_.clone(tile));
+        })
         tilesBeingUsed = _.shuffle(tilesBeingUsed);
 
-        //selects board from the html file
+        //selects the board from html
         var board = $('#board');
-        var row = $(document.createElement('div'));
+        
+        //creates the 4x4 of tiles
+        var row = $(document.createElement('div'))
         var img;
-
-        //creates the 4x4 grid of pictures
-        _.forEach(tilesBeingUsed, function(tile, elemIndex) {
-            if(elemIndex > 0 && 0 == elemIndex % 4) {
-               board.append(row);
-               row = $(document.createElement('div'));
+        _.forEach(tilesBeingUsed, function (tile, elemIndex) {
+            if (elemIndex > 0 && 0 == elemIndex % 4) {
+                board.append(row);
+                row = $(document.createElement('div'));
             }
             img = $(document.createElement('img'));
-
             img.attr({
-                src: 'img/tile-back.png',
-                alt: 'tile ' + tile.idNumber
-           });
+                imagesrc: 'img/tile-back.png',
+                alt: 'tile' + tile.tileNum
+            });
 
+            //associates each image with a tile
             img.data('tile', tile);
+
             row.append(img);
         });
-
         board.append(row);
-
-        //sets up the timer for when the game starts
-        var startTime = Date.now();
-        timeCount = window.setInterval(function() {
+        
+        //sets up timer for when the game starts
+        var startTime = Date.now()
+        timeCount = window.setInterval(function () {
             var timer = (Date.now() - startTime) / 1000;
             timer = Math.floor(timer);
             $('#timeElapsed').text(timer + ' seconds');
         }, 1000);
-
+        
         doneLoading = true;
 
+        //if a tile is clicked by the player
         $('#board img').click(function () {
-            if(!canClick) {
-                return;
-            }
             var clickedImg = $(this);
             var tile = clickedImg.data('tile');
-            //flips tile if it hasn't been clicked
-            if(!(tile.tileClicked)) {
+            
+            //flips the tile if it hasn't been previously picked
+            if (!tile.matched && !clickedImg.is(storedPicture) && doneLoading == true) {
+                doneLoading = false;
                 flipTile(tile, clickedImg);
-                //stores img if first tile clicked
-                if(storedPicture == null) {
-                    storedPicture = clickedImg;
-                }else {
-                    //if the two tiles are the same decrease remaining pairs counter
-                    //if player wins game displays win message
-                    if(storedPicture.data('tile').src == tile.src) {
-                        remainingPairs -= 1;
-                        storedPicture = null;
-                        if(remainingPairs == 0) {
-                            $('#win').css('display', 'block');
-                        }
-                        update();
-                    }
-                    //sets a 1 second delay from clicking on tiles
-                    else {
-                        canClick == false;
-                        missed++;
-                        window.setTimeout(function() {
-                            flipTile(tile, clickedImg);
-                            flipTile(storedPicture.data('tile'), storedPicture);
-                            update();
-                        }, 1000);
-                        canClick = true;
-                    }
-                }
+                check(tile, clickedImg);
+            }
+            
+            update();
+            
+            //when the user wins. Displays win message
+            if(matches == 8){
+                $('#win').css('display', 'block');            
             }
         });
-        function flipTile(tile, img) {
-            img.fadeOut(100, function() {
-                if(tile.tileClicked) {
-                    img.attr('src', 'img/tile-back.png');
-                }
-                else {
-                    img.attr('src', tile.src);
-                }
-                tile.flipped = !tile.flipped;
-                img.fadeIn(100);
+    }); 
+    
+    //updates the stats
+    function update() {
+        $('#matchesNumber').text(matchesNumber);
+        $('#incorrectGuesses').text(missedNumber);
+        $('#pairsLeft').text(remainingPairs);
+    }
 
-            });
+    //flips the clicked tile to show the real image
+    function flipTile(tile, img) {
+        img.fadeOut(100, function () {
+
+            if (tile.tileClicked) {
+                img.attr('imagesrc', 'img/tile-back.png');
+            } else {
+                img.attr('imagesrc', tile.imagesrc);
+            }
+            tile.tileClicked = !tile.tileClicked;
+            img.fadeIn(100);
+        });
+    }
+    
+    //if clicked first. Stores picture
+    //if clicked second. Compares the images to see if they are the same
+    function check(tile, img) {
+        //if clicked second
+        if (storedPicture) {
+            var storedTile = storedPicture.data('tile');
+            var storedImage = storedPicture;
+            if (tile.tileNum == storedTile.tileNum) {
+                tile.matched = true;
+                storedTile.matched = true;
+                matches += 1;
+                remaining -= 1;
+                doneLoading = true;
+            } else {
+                missed += 1;
+                setTimeout(function () {
+                    flipTile(tile, img);
+                    flipTile(storedTile, storedImage);
+                    doneLoading = true;
+                }, 1000);
+            }
+            storedPicture = null;
+        //if click first
+        } else {
+            storedPicture = img;
+            doneLoading = true;
         }
-    })
+    }
+
 });
-
-function update() {
-    $('matchesNumber').text(matchNumber);
-    $('incorrectGuesses').text(missed);
-    $('pairsLeft').text(remainingPairs);
-}
-
-function flipTile(tile, img) {
-    img.fadeOut(100, function() {
-        if(tile.tileClicked) {
-            img.attr('src', 'img/tile-back.png');
-        }
-        else {
-            img.attr('src', tile.src);
-        }
-        tile.flipped = !tile.flipped;
-        img.fadeIn(100);
-
-    });
-}
-
-
-
-
